@@ -27,7 +27,7 @@ blacklist = [
   'docker_daemon',
   'kubernetes',
   'ntp',  # provided as a go check by the core agent
-  'vsphere',
+  'sqlserver',
 ]
 
 build do
