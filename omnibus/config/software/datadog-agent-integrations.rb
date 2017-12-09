@@ -91,7 +91,22 @@ build do
       manifest = JSON.parse(File.read(manifest_file_path))
       manifest['supported_os'].include?(os) || next
 
-      # TODO: copy configuration stuff
+      check_conf_dir = "#{conf_dir}/#{check}.d"
+
+      # Copy the check config to the conf directories
+      if File.exist? "#{check_dir}/conf.yaml.example"
+        mkdir check_conf_dir unless File.exists? (check_conf_dir)
+        copy "#{check_dir}/conf.yaml.example", "#{check_conf_dir}/"
+      end
+
+      # Copy auto_conf
+      if os != 'windows'
+        # We don't have auto_conf on windows yet
+        if File.exist? "#{check_dir}/auto_conf.yaml"
+          mkdir check_conf_dir unless File.exists? (check_conf_dir)
+          copy "#{check_dir}/auto_conf.yaml", "#{check_conf_dir}/"
+        end
+      end
 
       File.file?("#{check_dir}/setup.py") || next
       if windows?
