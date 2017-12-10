@@ -66,9 +66,12 @@ build do
 
     if windows?
       build_args = "wheel --no-deps ."
-      install_args = "install *.whl"
       command "#{windows_safe_path(install_dir)}\\embedded\\scripts\\pip.exe #{build_args}", :cwd => "#{project_dir}\\datadog-base"
-      command "#{windows_safe_path(install_dir)}\\embedded\\scripts\\pip.exe #{install_args}", :cwd => "#{project_dir}\\datadog-base"
+      Dir.glob("#{project_dir}\\datadog-base\\*.whl").each do |wheel_path|
+        whl_file = wheel_path.split('/').last
+        install_args = "install #{whl_file}"
+        command "#{windows_safe_path(install_dir)}\\embedded\\scripts\\pip.exe #{install_args}", :cwd => "#{project_dir}\\datadog-base"
+      end
     else
       build_env = {
         "LD_RUN_PATH" => "#{install_dir}/embedded/lib",
@@ -111,7 +114,11 @@ build do
       File.file?("#{check_dir}/setup.py") || next
       if windows?
         command "#{windows_safe_path(install_dir)}\\embedded\\scripts\\pip.exe #{build_args}", :cwd => "#{project_dir}\\#{check}"
-        command "#{windows_safe_path(install_dir)}\\embedded\\scripts\\pip.exe #{install_args}", :cwd => "#{project_dir}\\#{check}"
+        Dir.glob("#{project_dir}\\#{check}\\*.whl").each do |wheel_path|
+          whl_file = wheel_path.split('/').last
+          install_args = "install #{whl_file}"
+          command "#{windows_safe_path(install_dir)}\\embedded\\scripts\\pip.exe #{install_args}", :cwd => "#{project_dir}\\#{check}"
+        end
       else
         build_env = {
           "LD_RUN_PATH" => "#{install_dir}/embedded/lib",
