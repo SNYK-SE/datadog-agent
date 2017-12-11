@@ -4,7 +4,7 @@ stages:
   - integration_test
   - package_build
   - testkitchen_deploy
-  - testkitchen_dd_agent_testing
+  - testkitchen_testing
   - testkitchen_cleanup
   - image_build
   - image_deploy
@@ -386,8 +386,8 @@ deploy_suse_rpm_testing:
     - aws s3 sync ./rpmrepo/suse/ s3://$RPM_TESTING_S3_BUCKET/suse/$CI_PIPELINE_ID --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=3a6e02b08553fd157ae3fb918945dd1eaae5a1aa818940381ef07a430cf25732
 
 # run dd-agent-testing
-testkitchen_dd_agent_testing:
-  stage: testkitchen_dd_agent_testing
+testkitchen_testing:
+  stage: testkitchen_testing
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/datadog-agent-builders/dd-agent-testing:latest
   only:
     - master
