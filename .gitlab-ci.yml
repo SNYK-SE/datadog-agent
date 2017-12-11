@@ -317,6 +317,7 @@ deploy_deb_testing:
   only:
     - master
     - tags
+    - greg/testkitchen
   tags: [ "runner:main", "size:large" ]
   script:
     - source /usr/local/rvm/scripts/rvm
@@ -353,6 +354,7 @@ deploy_rpm_testing:
   only:
     - master
     - tags
+    - greg/testkitchen
   tags: [ "runner:main", "size:large" ]
   script:
     - source /usr/local/rvm/scripts/rvm
@@ -379,9 +381,9 @@ deploy_suse_rpm_testing:
     - rvm use 2.4
     - mkdir -p ./rpmrepo/suse/x86_64/
     - aws s3 sync s3://$RPM_TESTING_S3_BUCKET/suse/$CI_PIPELINE_ID ./rpmrepo/
-    - cp $OMNIBUS_PACKAGE_DIR_SUSE/*x86_64.rpm ./rpmrepo/x86_64/
-    - createrepo --update -v --checksum sha ./rpmrepo/x86_64
-    - aws s3 sync ./rpmrepo/ s3://$RPM_TESTING_S3_BUCKET/suse/$CI_PIPELINE_ID --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=3a6e02b08553fd157ae3fb918945dd1eaae5a1aa818940381ef07a430cf25732
+    - cp $OMNIBUS_PACKAGE_DIR_SUSE/*x86_64.rpm ./rpmrepo/suse/x86_64/
+    - createrepo --update -v --checksum sha ./rpmrepo/suse/x86_64
+    - aws s3 sync ./rpmrepo/suse/ s3://$RPM_TESTING_S3_BUCKET/suse/$CI_PIPELINE_ID --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=3a6e02b08553fd157ae3fb918945dd1eaae5a1aa818940381ef07a430cf25732
 
 # run dd-agent-testing
 testkitchen_dd_agent_testing:
