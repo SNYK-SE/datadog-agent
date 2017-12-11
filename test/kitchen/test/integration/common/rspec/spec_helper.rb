@@ -6,7 +6,7 @@ def stop
   if has_systemctl
     system('sudo systemctl stop datadog-agent.service')
   else
-    system('initctl stop datadog-agent')
+    system('sudo initctl stop datadog-agent')
   end
 end
 
@@ -14,7 +14,7 @@ def start
   if has_systemctl
     system('sudo systemctl start datadog-agent.service')
   else
-    system('initctl start datadog-agent')
+    system('sudo initctl start datadog-agent')
   end
 end
 
@@ -22,7 +22,7 @@ def restart
   if has_systemctl
     system('sudo systemctl restart datadog-agent.service && sleep 10')
   else
-    system('initctl restart datadog-agent')
+    system('sudo initctl restart datadog-agent')
   end
 end
 
@@ -31,14 +31,14 @@ def has_systemctl
 end
 
 def info
-  `datadog-agent status`
+  `sudo datadog-agent status`
 end
 
 def status
   if has_systemctl
     system('sudo systemctl status datadog-agent.service')
   else
-    system('initctl status datadog-agent')
+    system('sudo initctl status datadog-agent')
   end
 end
 

@@ -43,7 +43,7 @@ end
 execute 'add config file' do
   command <<-EOF
     sudo sh -c "sed \'s/api_key:.*/api_key: #{node['dd-agent-step-by-step']['api_key']}/\' \
-    /etc/dd-agent/datadog.conf.example > /etc/dd-agent/datadog.conf"
+    /etc/datadog-agent/datadog.yaml.example > /etc/datadog-agent/datadog.yaml"
   EOF
 end
 

@@ -15,10 +15,10 @@ fi
 
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
 
-groups=($(az group list -o tsv --query "[?starts_with(name, 'kitchen-dd-agent')]|[*].name"))
+groups=$(az group list -o tsv --query "[?starts_with(name, 'kitchen-dd-agent')]|[*].name")
 
 for group in $groups; do
   echo "az group delete -n $group -y"
-  az group delete -n $group -y &
+  ( az group delete -n $group -y || true ) &
   printf "\n\n"
 done
