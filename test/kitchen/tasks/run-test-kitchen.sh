@@ -15,7 +15,8 @@ export AZURE_SSH_KEY_PATH="$(pwd)/ssh-key"
 
 eval "$(chef shell-init bash)"
 
-if [ -z ${AZURE_CLIENT_ID+x} ]; then$(aws ssm get-parameter --region us-east-1 --name ci.dd-agent-testing.azure_client_id --with-decryption --query "Parameter.Value" --out text)
+if [ -z ${AZURE_CLIENT_ID+x} ]; then
+  export AZURE_CLIENT_ID=$(aws ssm get-parameter --region us-east-1 --name ci.dd-agent-testing.azure_client_id --with-decryption --query "Parameter.Value" --out text)
 fi
 if [ -z ${AZURE_CLIENT_SECRET+x} ]; then
   export AZURE_CLIENT_SECRET=$(aws ssm get-parameter --region us-east-1 --name ci.dd-agent-testing.azure_client_secret --with-decryption --query "Parameter.Value" --out text)
@@ -28,7 +29,7 @@ if [ -z ${AZURE_SUBSCRIPTION_ID+x} ]; then
 fi
 
 if [ ! -f /root/.azure/credentials ]; then
-  mkdir /root/.azure
+  mkdir -p /root/.azure
   touch /root/.azure/credentials
 fi
 

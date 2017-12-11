@@ -1,6 +1,7 @@
 #!/usr/bin/env bash -l
 
-if [ -z ${AZURE_CLIENT_ID+x} ]; then$(aws ssm get-parameter --region us-east-1 --name ci.dd-agent-testing.azure_client_id --with-decryption --query "Parameter.Value" --out text)
+if [ -z ${AZURE_CLIENT_ID+x} ]; then
+  export AZURE_CLIENT_ID=$(aws ssm get-parameter --region us-east-1 --name ci.dd-agent-testing.azure_client_id --with-decryption --query "Parameter.Value" --out text)
 fi
 if [ -z ${AZURE_CLIENT_SECRET+x} ]; then
   export AZURE_CLIENT_SECRET=$(aws ssm get-parameter --region us-east-1 --name ci.dd-agent-testing.azure_client_secret --with-decryption --query "Parameter.Value" --out text)
@@ -14,18 +15,10 @@ fi
 
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
 
-vms=($(az vm list --query "[?starts_with(name, 'dd-agent-testing')]|[*].name" --output tsv))
-
-for vm in $vms; do
-  echo "az vm delete -n $vm -y"
-  az group delete -n $vm -y &
-  echo "\n\n"
-done
-
 groups=($(az group list -o tsv --query "[?starts_with(name, 'kitchen-dd-agent')]|[*].name"))
 
 for group in $groups; do
   echo "az group delete -n $group -y"
   az group delete -n $group -y &
-  echo "\n\n"
+  printf "\n\n"
 done

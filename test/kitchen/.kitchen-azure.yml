@@ -79,6 +79,7 @@ suites:
     - "recipe[datadog::dd-agent]"
   attributes:
     datadog: &dd-agent-conf-x64
+      agent6: true
       api_key: &api_key aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       # The api key needs to be 32 characters long
       application_key: &application_key e45ba67f18ba5b73799b8a7834f2cdfc7c691821
@@ -122,6 +123,7 @@ suites:
   attributes:
     dd-agent-install-script:
       api_key: *api_key
+      candidate_repo_branch: <%= ENV['CI_PIPELINE_ID'] %>
       install_candidate: true
 
 # Installs the latest release candidate using the step-by-step instructions (on dogweb)
@@ -131,6 +133,8 @@ suites:
   attributes:
     dd-agent-step-by-step:
       api_key: *api_key
+      repo_branch_apt: <%= ENV['CI_PIPELINE_ID'] %>
+      repo_branch_yum: <%= ENV['CI_PIPELINE_ID'] %>
       install_candidate: true
 
 - name: benchmark_dogstatsd
