@@ -3,12 +3,28 @@
   ENV['AZURE_LOCATION'] ||= "North Central US"
 %>
 
+<%
+  vm_tags = {
+    'dd-agent-testing': 'dd-agent-testing'
+  }
+  if ENV['CI_PIPELINE_ID']
+    vm_tags['pipeline_id'] = ENV['CI_PIPELINE_ID']
+  else
+    vm_tags['pipeline_id'] = 'nopipeline'
+  end
+%>
+
 driver:
   name: azurerm
 
 driver_config:
   subscription_id: <%= ENV['AZURE_SUBSCRIPTION_ID'] %>
   location: <%= ENV['AZURE_LOCATION'] %>
+  <% if ENV['CI_PIPELINE_ID'] %>
+  azure_resource_group_suffix: pl<%= ENV['CI_PIPELINE_ID'] %>
+  <% else %>
+  azure_resource_group_suffix: plnone
+  <% end %>
 
 transport:
   ssh_key: <%= ENV['AZURE_SSH_KEY_PATH'] %>
@@ -41,9 +57,10 @@ platforms:
     locations = [
       "North Central US",
       "Central US",
-      "West Central US",
+      "South Central US",
       "West US",
-      "West US 2",
+      "East US 2",
+      "East US"
     ]
 
     drivers = %w(
@@ -58,13 +75,17 @@ platforms:
     size = sizes[idx % sizes.length]
     location = locations[idx % locations.length]
 %>
-- name: <%= platform[0] %>-<%= chef_version %>-azurerm
+- name: <%= platform[0] %>-azure
   driver_config:
     machine_size: <%= size %>
     image_urn: <%= platform[1] %>
     location: <%= location %>
-    vm_name: dd-agent-testing-<%= platform[0] %>-<%= chef_version %>-azure
-    server_name: dd-agent-testing-<%= platform[0] %>-<%= chef_version %>
+    vm_name: dd-agent-testing-<%= platform[0] %>-azure
+    vm_tags:
+      <% vm_tags.each do |key,value| %>
+      <%= key %>: <%= value %>
+      <% end %>
+
 <% end %>
 
 suites:
@@ -88,6 +109,9 @@ suites:
       aptrepo: &testing_apt_repo http://apttesting.datad0g.com/
       aptrepo_dist: <%= ENV['CI_PIPELINE_ID'] %>
       yumrepo: http://yumtesting.datad0g.com/<%= ENV['CI_PIPELINE_ID'] %>/x86_64/
+      agent6_aptrepo: &testing_apt_repo http://apttesting.datad0g.com/
+      agent6_aptrepo_dist: <%= ENV['CI_PIPELINE_ID'] %>
+      agent6_yumrepo: http://yumtesting.datad0g.com/<%= ENV['CI_PIPELINE_ID'] %>/x86_64/
 
 # Installs the latest release Agent, then updates it to the latest release
 # candidate

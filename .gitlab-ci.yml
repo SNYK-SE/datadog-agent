@@ -388,7 +388,7 @@ deploy_suse_rpm_testing:
 # run dd-agent-testing
 testkitchen_testing:
   stage: testkitchen_testing
-  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/datadog-agent-builders/dd-agent-testing:latest
+  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/datadog-agent-builders/dd-agent-testing:pipeline-171851
   only:
     - master
     - greg/testkitchen
@@ -416,6 +416,19 @@ testkitchen_cleanup:
     - aws s3 rm --recursive s3://DEB_TESTING_S3_BUCKET/dists/$CI_PIPELINE_ID
     - aws s3 rm --recursive s3://RPM_TESTING_S3_BUCKET/$CI_PIPELINE_ID
     - aws s3 rm --recursive s3://RPM_TESTING_S3_BUCKET/suse/$CI_PIPELINE_ID
+
+# run dd-agent-testing
+testkitchen_cleanup:
+  stage: testkitchen_cleanup
+  image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/datadog-agent-builders/dd-agent-testing:pipeline-171851
+  only:
+    - master
+    - greg/testkitchen
+    - tags
+  tags: [ "runner:main", "size:large" ]
+  script:
+    - cd $DD_AGENT_TESTING_DIR
+    - bash -l test/kitchen/tasks/clean.sh
 
 #
 # image_build

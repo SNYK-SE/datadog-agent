@@ -8,6 +8,7 @@ def stop
   else
     system('sudo initctl stop datadog-agent')
   end
+  system('sleep 10')
 end
 
 def start
@@ -16,6 +17,7 @@ def start
   else
     system('sudo initctl start datadog-agent')
   end
+  system('sleep 10')
 end
 
 def restart
@@ -24,6 +26,7 @@ def restart
   else
     system('sudo initctl restart datadog-agent')
   end
+  system('sleep 10')
 end
 
 def has_systemctl
@@ -32,6 +35,13 @@ end
 
 def info
   `sudo datadog-agent status`
+end
+
+def json_info
+  info_output = `sudo datadog-agent status -j`
+  info_output = info_output.gsub "Getting the status from the agent." ""
+
+  JSON.parse(info_output)
 end
 
 def status
@@ -104,6 +114,14 @@ shared_examples_for 'Agent' do
 end
 
 shared_examples_for "an installed Agent" do
+  it 'has an example config file' do
+    expect(File).to exist('/etc/datadog-agent/datadog.yaml.example')
+  end
+
+  it 'has a datadog-agent binary in usr/bin' do
+    expect(File).to exist('/usr/bin/datadog-agent')
+  end
+
   # FIXME: get these to work with A6
   # describe 'with pip dependencies' do
   #   before(:all) do
@@ -132,10 +150,21 @@ shared_examples_for "an installed Agent" do
   #   end
   #
   # end
-
 end
 
 shared_examples_for "a running Agent with no errors" do
+  before(:all) do
+    puts "Status"
+    puts "======================"
+    puts "======================"
+    puts "\n\n"
+    status
+    puts status
+    puts "\n\n"
+    puts "======================"
+    puts "======================"
+  end
+
   it 'has an agent binary' do
     expect(File).to exist('/usr/bin/datadog-agent')
   end
@@ -152,12 +181,25 @@ shared_examples_for "a running Agent with no errors" do
     expect(File).to exist('/etc/datadog-agent/datadog.yaml')
   end
 
-  it 'has "OK" in the info command' do
+  it 'has running checks' do
     # On systems that use systemd (on which the `start` script returns immediately)
     # sleep a few seconds to let the collector finish its first run
     system('command -v systemctl 2>&1 > /dev/null && sleep 5')
 
-    expect(info).to include 'OK'
+    json_info_output = json_info
+    expect(json_info_output).has_key? "runnerStats"
+    expect(json_info_output['runnerStats']).has_key? "Checks"
+    expect(json_info_output['runnerStats']['Checks']).not_to be_empty
+  end
+
+  it 'has an info command' do
+    # On systems that use systemd (on which the `start` script returns immediately)
+    # sleep a few seconds to let the collector finish its first run
+    system('command -v systemctl 2>&1 > /dev/null && sleep 5')
+
+    expect(info).to include "Forwarder"
+    expect(info).to include "DogStatsD"
+    expect(info).to include "Host Info"
   end
 
   it 'has no errors in the info command' do
