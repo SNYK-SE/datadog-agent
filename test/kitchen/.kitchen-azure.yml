@@ -37,7 +37,7 @@ platforms:
 # Loop through two lists and output a total matrix of all possible platform + chef versions,
 # for both drivers
 <% azure_test_platforms = [
-      ['ubuntu-16-04','Canonical:UbuntuServer:16.04.0-LTS:16.04.201611150'],
+      ['ubuntu-16-04','Canonical:UbuntuServer:16.04.0-LTS:16.04.201610200'],
       ['ubuntu-14-04', 'Canonical:UbuntuServer:14.04.5-LTS:14.04.201711151'],
       ['centos-69', 'OpenLogic:CentOS:6.9:6.9.20170612'],
       ['centos-74', 'OpenLogic:CentOS:7.4:7.4.20171110'],
@@ -57,10 +57,7 @@ platforms:
     locations = [
       "North Central US",
       "Central US",
-      "South Central US",
-      "West US",
-      "East US 2",
-      "East US"
+      "South Central US"
     ]
 
     drivers = %w(
@@ -91,11 +88,7 @@ platforms:
 suites:
 
 # Install the latest release candidate using Chef
-- name: dd-agent-x64
-  includes:
-     <% platforms_x64.each do |platform| %>
-    - <%= platform %>
-     <% end %>
+- name: dd-agent
   run_list:
     - "recipe[datadog::dd-agent]"
   attributes:
@@ -115,11 +108,7 @@ suites:
 
 # Installs the latest release Agent, then updates it to the latest release
 # candidate
-- name: dd-agent-upgrade-x64
-  includes:
-     <% platforms_x64.each do |platform| %>
-    - <%= platform %>
-     <% end %>
+- name: dd-agent-upgrade
   run_list:
     - "recipe[datadog::dd-agent]"
     - "recipe[dd-agent-upgrade]"
@@ -140,40 +129,36 @@ suites:
       # Used by the rspec test to know the version to which the agent should be upgraded
       agent_expected_version: &agent_expected_version <%= ENV['DD_AGENT_EXPECTED_VERSION'] || "5.99.0" %>
 
-# Installs the latest release candidate using the install script
-- name: dd-agent-install-script
-  run_list:
-    - "recipe[dd-agent-install-script]"
-  attributes:
-    dd-agent-install-script:
-      api_key: *api_key
-      candidate_repo_branch: <%= ENV['CI_PIPELINE_ID'] %>
-      install_candidate: true
+# # Installs the latest release candidate using the install script
+# - name: dd-agent-install-script
+#   run_list:
+#     - "recipe[dd-agent-install-script]"
+#   attributes:
+#     dd-agent-install-script:
+#       api_key: *api_key
+#       candidate_repo_branch: <%= ENV['CI_PIPELINE_ID'] %>
+#       install_candidate: true
+#
+# # Installs the latest release candidate using the step-by-step instructions (on dogweb)
+# - name: dd-agent-step-by-step
+#   run_list:
+#     - "recipe[dd-agent-step-by-step]"
+#   attributes:
+#     dd-agent-step-by-step:
+#       api_key: *api_key
+#       repo_branch_apt: <%= ENV['CI_PIPELINE_ID'] %>
+#       repo_branch_yum: <%= ENV['CI_PIPELINE_ID'] %>
+#       install_candidate: true
 
-# Installs the latest release candidate using the step-by-step instructions (on dogweb)
-- name: dd-agent-step-by-step
-  run_list:
-    - "recipe[dd-agent-step-by-step]"
-  attributes:
-    dd-agent-step-by-step:
-      api_key: *api_key
-      repo_branch_apt: <%= ENV['CI_PIPELINE_ID'] %>
-      repo_branch_yum: <%= ENV['CI_PIPELINE_ID'] %>
-      install_candidate: true
-
-- name: benchmark_dogstatsd
-  includes:
-     <% platforms_x64.each do |platform| %>
-    - <%= platform %>
-     <% end %>
-  run_list:
-    - "recipe[datadog::dd-agent]"
-  attributes:
-    datadog:
-      api_key: *api_key
-      application_key: *application_key
-      # For testing pre-release agent
-      url: *staging_url
-      aptrepo: *testing_apt_repo
-      aptrepo_dist: testing
-      yumrepo: http://yumtesting.datad0g.com/<%= ENV['CI_PIPELINE_ID'] %>/x86_64/
+# - name: benchmark_dogstatsd
+#   run_list:
+#     - "recipe[datadog::dd-agent]"
+#   attributes:
+#     datadog:
+#       api_key: *api_key
+#       application_key: *application_key
+#       # For testing pre-release agent
+#       url: *staging_url
+#       aptrepo: *testing_apt_repo
+#       aptrepo_dist: testing
+#       yumrepo: http://yumtesting.datad0g.com/<%= ENV['CI_PIPELINE_ID'] %>/x86_64/

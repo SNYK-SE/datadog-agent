@@ -24,7 +24,7 @@ fi
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID > /dev/null
 set -x
 
-groups=$(az group list -o tsv --query "[?starts_with(name, 'dd-agent-testing')]|[?ends_with(name, 'pl$CI_PIPELINE_ID')]")
+groups=$(az group list -o tsv --query "[?starts_with(name, 'kitchen')]|[?ends_with(name, 'pl$CI_PIPELINE_ID')].[name]")
 
 for group in $groups; do
   echo "az group delete -n $group -y"
@@ -34,5 +34,8 @@ done
 
 vms=$(az vm list --query "[?starts_with(name, 'dd-agent-testing')]|[?tags.pipeline_id=='$CI_PIPELINE_ID']|[*].[id]" -o tsv)
 
-echo "az vm delete --ids $vms -y"
-(az vm delete --ids $vms -y || true) &
+if [ -n $vms ]; then
+  echo $vms
+  echo "az vm delete --ids $vms -y"
+  (az vm delete --ids $vms -y || true) &
+fi

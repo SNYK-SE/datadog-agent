@@ -3,6 +3,23 @@
 IFS=$'\n\t'
 set -euxo pipefail
 
+rm -rf .kitchen
+
+if [ -f $(pwd)/ssh-key ]; then
+  rm ssh-key
+fi
+
+ssh-keygen -f $(pwd)/ssh-key -P "" -t rsa -b 2048
+
+export AZURE_SSH_KEY_PATH="$(pwd)/ssh-key"
+
+eval "$(chef shell-init bash)"
+
+if [ ! -f /root/.azure/credentials ]; then
+  mkdir -p /root/.azure
+  touch /root/.azure/credentials
+fi
+
 # These should not be printed out
 set +x
 if [ -z ${AZURE_CLIENT_ID+x} ]; then
@@ -17,26 +34,24 @@ fi
 if [ -z ${AZURE_SUBSCRIPTION_ID+x} ]; then
   export AZURE_SUBSCRIPTION_ID=$(aws ssm get-parameter --region us-east-1 --name ci.dd-agent-testing.azure_subscription_id --with-decryption --query "Parameter.Value" --out text)
 fi
-if [ -z ${CI_PIPELINE_ID+x} ]; then
-  export CI_PIPELINE_ID='none'
-fi
 
-az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID > /dev/null
+(echo "<% subscription_id=\"$AZURE_SUBSCRIPTION_ID\"; client_id=\"$AZURE_CLIENT_ID\"; client_secret=\"$AZURE_CLIENT_SECRET\"; tenant_id=\"$AZURE_TENANT_ID\"; %>" && cat azure-creds.erb) | erb > /root/.azure/credentials
 set -x
 
-printf "VMs:\n"
 
-if [ ${STRAYS_VERBOSE+x} ]; then
-  az vm list --query "[?starts_with(name, 'dd-agent-testing')]|[?tags.pipeline_id=='$CI_PIPELINE_ID']"
-else
-  az vm list --query "[?starts_with(name, 'dd-agent-testing')]|[?tags.pipeline_id=='$CI_PIPELINE_ID']|[*].{name:name,location:location,state:provisioningState}" -o table
-fi
+echo $(pwd)/ssh-key
+echo $AZURE_SSH_KEY_PATH
 
-printf "\n"
+eval $(ssh-agent -s)
 
-printf "Groups:\n"
-if [ ${STRAYS_VERBOSE+x} ]; then
-az group list --query "[?starts_with(name, 'kitchen-')]|[?ends_with(name, 'pl$CI_PIPELINE_ID')]"
-else
-az group list --query "[?starts_with(name, 'kitchen-')]|[?ends_with(name, 'pl$CI_PIPELINE_ID')]|[*].{name:name,location:location,state:properties.provisioningState}" -o table
-fi
+ssh-add "$AZURE_SSH_KEY_PATH"
+
+bundle install
+cp .kitchen-azure.yml .kitchen.yml
+kitchen diagnose --no-instances --loader
+# 
+# # in docker we cannot interact to do this so we must disable it
+# mkdir -p ~/.ssh
+# [[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+#
+# rake dd-agent-azure-parallel[20]
