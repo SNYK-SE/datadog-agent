@@ -14,6 +14,7 @@ import (
 // Kubelet constants
 const (
 	AuthTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	CACertPath    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
 
 // GetAuthToken reads the serviceaccount token
@@ -24,4 +25,14 @@ func GetAuthToken() string {
 		return ""
 	}
 	return string(token)
+}
+
+// GetCACert reads the serviceaccount ca crt
+func GetCACert() ([]byte, error) {
+	cert, err := ioutil.ReadFile(CACertPath)
+	if err != nil {
+		log.Errorf("Could not read ca crt from %s: %s", CACertPath, err)
+		return []byte{}, err
+	}
+	return cert, nil
 }

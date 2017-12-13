@@ -21,6 +21,8 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes"
 	"github.com/DataDog/datadog-agent/pkg/util/retry"
 
+	"crypto/tls"
+	"crypto/x509"
 	log "github.com/cihub/seelog"
 )
 
@@ -36,6 +38,7 @@ var globalKubeUtil *KubeUtil
 type KubeUtil struct {
 	retry.Retrier
 	kubeletAPIURL string
+	httpClient    *http.Client
 }
 
 // GetKubeUtil returns an instance of KubeUtil.
@@ -59,9 +62,10 @@ func GetKubeUtil() (*KubeUtil, error) {
 }
 
 func (ku *KubeUtil) locateKubelet() error {
-	url, err := locateKubelet()
+	url, client, err := locateKubelet()
 	if err == nil {
 		ku.kubeletAPIURL = url
+		ku.httpClient = client
 		return nil
 	}
 	return err
@@ -87,7 +91,7 @@ func (ku *KubeUtil) GetNodeInfo() (ip, name string, err error) {
 // GetLocalPodList returns the list of pods running on the node where this pod is running
 func (ku *KubeUtil) GetLocalPodList() ([]*Pod, error) {
 
-	data, err := PerformKubeletQuery(fmt.Sprintf("%s/pods", ku.kubeletAPIURL))
+	data, err := PerformKubeletQuery(fmt.Sprintf("%s/pods", ku.kubeletAPIURL), ku.httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error performing kubelet query: %s", err)
 	}
@@ -126,39 +130,58 @@ func (ku *KubeUtil) searchPodForContainerID(podlist []*Pod, containerID string) 
 }
 
 // Try and find the hostname to query the kubelet
-// TODO: Add TLS verification
-func locateKubelet() (string, error) {
+func locateKubelet() (string, *http.Client, error) {
 	host := config.Datadog.GetString("kubernetes_kubelet_host")
 	if host == "" {
 		var err error
 		host, err = docker.HostnameProvider("")
 		if err != nil {
-			return "", fmt.Errorf("unable to get hostname from docker, please set the kubernetes_kubelet_host option: %s", err)
+			return "", nil, fmt.Errorf("unable to get hostname from docker, please set the kubernetes_kubelet_host option: %s", err)
 		}
 	}
 
-	port := config.Datadog.GetInt("kubernetes_http_kubelet_port")
-	url := fmt.Sprintf("http://%s:%d", host, port)
-	healthzURL := fmt.Sprintf("%s%s", url, KubeletHealthPath)
-	if _, err := PerformKubeletQuery(healthzURL); err == nil {
-		return url, nil
+	url := fmt.Sprintf("http://%s:%d", host, config.Datadog.GetInt("kubernetes_http_kubelet_port"))
+	client := buildClient(false)
+	if checkKubletHealth(url, client) {
+		return url, client, nil
 	}
 	log.Debugf("Couldn't query kubelet over HTTP, assuming it's not in no_auth mode.")
 
-	port = config.Datadog.GetInt("kubernetes_https_kubelet_port")
-	url = fmt.Sprintf("https://%s:%d", host, port)
-	healthzURL = fmt.Sprintf("%s%s", url, KubeletHealthPath)
-	if _, err := PerformKubeletQuery(healthzURL); err == nil {
-		return url, nil
+	url = fmt.Sprintf("https://%s:%d", host, config.Datadog.GetInt("kubernetes_https_kubelet_port"))
+	client = buildClient(true)
+	if checkKubletHealth(url, client) {
+		return url, client, nil
 	}
 
-	return "", fmt.Errorf("Could not find a method to connect to kubelet")
+	return "", nil, fmt.Errorf("Could not find a method to connect to kubelet")
+}
+
+func checkKubletHealth(kubeletUrl string, client *http.Client) bool {
+	healthzURL := fmt.Sprintf("%s%s", kubeletUrl, KubeletHealthPath)
+	_, err := PerformKubeletQuery(healthzURL, client)
+	return err == nil
+}
+
+func buildClient(verifyTLS bool) *http.Client {
+	if verifyTLS {
+		if cert, err := kubernetes.GetCACert(); err == nil {
+			certPool := x509.NewCertPool()
+			certPool.AppendCertsFromPEM(cert)
+			transport := http.Transport{
+				TLSClientConfig: &tls.Config{RootCAs: certPool},
+			}
+			return &http.Client{Transport: &transport}
+		} else {
+			// Fallback to default client if failed to load cert
+			log.Debugf("Couldn't load ca cert from %s: %s", kubernetes.CACertPath, err)
+		}
+	}
+	return http.DefaultClient
 }
 
 // PerformKubeletQuery performs a GET query against kubelet and return the response body
 // Supports token-based auth
-// TODO: TLS
-func PerformKubeletQuery(url string) ([]byte, error) {
+func PerformKubeletQuery(url string, client *http.Client) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create request: %s", err)
@@ -168,7 +191,7 @@ func PerformKubeletQuery(url string) ([]byte, error) {
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", kubernetes.GetAuthToken()))
 	}
 
-	res, err := http.Get(url)
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Error executing request to %s: %s", url, err)
 	}
