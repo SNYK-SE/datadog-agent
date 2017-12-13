@@ -34,8 +34,7 @@ done
 
 vms=$(az vm list --query "[?starts_with(name, 'dd-agent-testing')]|[?tags.pipeline_id=='$CI_PIPELINE_ID']|[*].[id]" -o tsv)
 
-if [ -n $vms ]; then
-  echo $vms
-  echo "az vm delete --ids $vms -y"
-  (az vm delete --ids $vms -y || true) &
-fi
+for vm in $vms; do
+  echo "az vm delete --ids $vm -y"
+  (az vm delete --ids $vm -y || true) &
+done
